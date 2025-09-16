@@ -1,16 +1,17 @@
 package com.roshanadke.cssstyling
 
 import android.os.Bundle
+import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import com.roshanadke.cssstyling.ui.theme.CssStylingTheme
 
 class MainActivity : ComponentActivity() {
@@ -20,9 +21,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             CssStylingTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+
+                    LocalHtmlWebView(
+                        modifier = Modifier.padding(
+                            innerPadding
+                        ),
+                        htmlFileName = "sample.html",
+                        cssFileName = "styles.css"
                     )
                 }
             }
@@ -31,17 +36,42 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun LocalHtmlWebView(modifier: Modifier, htmlFileName: String, cssFileName: String) {
+    val context = LocalContext.current
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    CssStylingTheme {
-        Greeting("Android")
-    }
+    AndroidView(
+        factory = { ctx ->
+            WebView(ctx).apply {
+                true.also { settings.javaScriptEnabled = it }
+
+                // Load HTML file from assets
+                val htmlString =
+                    context.assets.open(htmlFileName).bufferedReader().use { it.readText() }
+                val cssString =
+                    context.assets.open(cssFileName).bufferedReader().use { it.readText() }
+
+                val htmlWithCss = """
+                    <html>
+                    <head>
+                    <style>
+                    $cssString
+                    </style>
+                    </head>
+                    <body>
+                    $htmlString
+                    </body>
+                    </html>
+                """.trimIndent()
+
+                loadDataWithBaseURL(
+                    null,
+                    htmlWithCss,
+                    "text/html",
+                    "utf-8",
+                    null
+                )
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }
